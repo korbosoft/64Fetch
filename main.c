@@ -3,26 +3,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "detect.h"
+#include "main.h"
+
 void main() {
-    char sidmodel[5];
-    char region[14];
+    char cpu[11];
+    char kernal[10];
     char key;
-    char revision[11];
+    char region[14];
+    char sidmodel[5];
+    char prev289 = PEEK(0x289);
+    char prev28A = PEEK(0x28A);
     POKE(0x289,1);
-    POKE(0x28a,127);
+    POKE(0x28A,0x7F);
     clrscr();
-    switch (detectsid()) {
-        case 2:
-            strcpy(sidmodel, "6581");
+    switch (detect_sid()) {
+        case 1:
+            strcpy(sidmodel, "MOS 6581");
             break;
-        case 3:
-            strcpy(sidmodel, "8580");
+        case 2:
+            strcpy(sidmodel, "MOS 8580");
             break;
         default:
             strcpy(sidmodel, "????");
     }
-    switch (detectregion()) {
+    switch (detect_region()) {
         case 1:
             strcpy(region, "Old NTSC");
             break;
@@ -38,32 +42,55 @@ void main() {
         default:
             strcpy(region, "????");
     }
-    switch (PEEK(65408L)) {
-        case 170:
-            strcpy(revision, "Revision 1");
+    switch (detect_kernal()) {
+        case 1:
+            strcpy(kernal, "901227-01");
             break;
-        case 0:
-            strcpy(revision, "Revision 2");
+        case 2:
+            strcpy(kernal, "901227-02");
             break;
         case 3:
-            strcpy(revision, "Revision 3");
+            strcpy(kernal, "901227-03");
             break;
-        case 67:
-            strcpy(revision, "SX-64");
+        case 4:
+            strcpy(kernal, "251104-04");
             break;
-        case 100:
-            strcpy(revision, "4064");
+        case 5:
+            strcpy(kernal, "251104-01");
+            break;
+        case 6:
+            strcpy(kernal, "901246-01");
+            break;
+        case 10:
+        case 11:
+            strcpy(kernal, "JiffyDOS");
             break;
         default:
-            strcpy(revision, "Unknown");
+            strcpy(kernal, "Unknown");
+    }
+    switch (detect_cpu()) {
+        case 0:
+            strcpy(cpu, "MOS 6502!?");
+            break;
+        case 9:
+            strcpy(cpu, "MOS 8502");
+            break;
+        case 10:
+            strcpy(cpu, "MOS 8500");
+            break;
+        case 11:
+            strcpy(cpu, "MOS 6510");
+            break;
+        default:
+            strcpy(cpu, "????");
     }
     printf("\n \x9A   \xAC\x12\xBE  \xBC\x92\x05      64Fetch\n");
     printf(" \x9A  \x12\xBE     \x92\x05      By Korbo\n");
     printf(" \x9A \x12\xBE      \x92\n");
     printf(" \xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 SID: %s\n", sidmodel);
     printf(" \x9A\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);
-    printf(" \x9A\x12   \x92     \x12   \x92\xBE\x05  KERNAL: %s\n", revision);
-    printf(" \x9A\x12   \x92     \x81\xA2\xA2\xA2\n");
+    printf(" \x9A\x12   \x92     \x12   \x92\xBE\x05  KERNAL: %s\n", kernal);
+    printf(" \x9A\x12   \x92     \x81\xA2\xA2\xA2\x05   CPU: %s\n", cpu);
     printf(" \x9A\x12   \x92\xBB    \x81\x12   \xBC\x92\n");
     printf(" \x9A\x12\xE1  \xBC\x92    \x81\x12    \xBC\x92\n");
     printf(" \x9A \x12    \x92\xA2\xA2\x12\xBE\x92\n");
@@ -79,7 +106,7 @@ void main() {
     while(key != 0x0D) {
         key = cgetc();
     }
-    POKE(0x289,10);
-    POKE(0x28a,0);
+    POKE(0x289,prev289);
+    POKE(0x28a,prev28A);
 }
 
