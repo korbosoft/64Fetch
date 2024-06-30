@@ -5,6 +5,7 @@
 
 #include <6502.h>
 #include <peekpoke.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -144,6 +145,176 @@ unsigned char detect_sid(void) {
     };
 
 };//end func
+
+void fifteen_nops(void) {
+    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
+    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
+    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
+    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
+    /*  5 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
+};//end-func
+
+
+unsigned char 	  raster_scan_line;
+unsigned long int estimated_original_hz;
+unsigned char     estimated_mhz_only;
+unsigned long int estimated_remaining_hz;
+
+// Using this for the fastest loops below for CPU MHz detection.
+// https://cc65.github.io/doc/cc65.html#register-vars
+#pragma register-vars(on)
+
+void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, char * input_string) {
+
+    register unsigned char cycles_to_burn; // This is a zero page variable so it's super fast. https://cc65.github.io/doc/cc65.html#register-vars
+
+    unsigned char i;
+    unsigned char ntsc_status = ntscpal < 2;
+    unsigned long int scaling_factor;
+    unsigned char mhz_string[6];
+
+    // 1.02 MHz NTSC / 0.985 MHz PAL
+    // The clock speed doubles when 80-column display modes are in use (2.02 MHz for NTSC, 1.97 MHz for PAL)
+    // C64  CLOCK=1022730 for NTSC systems and CLOCK= 985250 for PAL systems.
+    // C128 CLOCK=2045460 for NTSC systems and CLOCK=1970500 for PAL systems.
+
+    // TODO: FUCKING PAL! I FUCKING HATE PAL!!!
+    // TODO: I need to make a function full of 10 NOP's
+    // TODO: And then call that to save some space.
+    // TODO: And then I need to make PAL versions
+    // TODO: For the C64/C128 and the SuperCPU.
+    // TODO: FUCK YOU PAL!
+
+    estimated_mhz_only = 0;
+    estimated_remaining_hz = 0;
+    estimated_original_hz = 0;
+    raster_scan_line = 0;
+    i = 0;
+    scaling_factor = 0;
+    cycles_to_burn = 0;
+
+    SEI(); 				// Disable interupts.
+
+    if ( detected_cpu == CPU_65816 ) {
+
+        // Display mode $D011 Bit #7: Read: Current raster line (bit #8). C64 generates 262 (0-255 0) scanlines total on NTSC, 312 for Pal
+        // TODO: Do teh proper bit shift thing here!
+        while(1){
+            if ( PEEK(0xD012) == 0 && PEEK(0xD011) == 27 ) break;
+        };//end-while
+
+        for (i = 0; i < 7; ++i) ;		// *THIS IS HERE INTENTIONALLY!* This is because this slows down the SuperCPU and somehow this makes the timing math work out perfectly!
+
+        for (i = 1; i <= 60; ++i) {
+            fifteen_nops();
+        };//end-for
+
+        raster_scan_line = PEEK(0xD012); 												// Record the current raster scan line.
+
+        if (ntsc_status) {
+            scaling_factor = 122727600 ; // This is the NTSC scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
+        } else {
+            scaling_factor = 120200500 ; // This is the PAL >:-| scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
+        };//end-if
+
+    } else { // 6510 CPU
+
+        POKE(0xD030,253);	// Put C128 into fast mode. This comes *BEFORE* we start the timing so it doesn't affect the timing. However, the math works out better above with the SuperCPU.
+
+        // Display mode $D011 Bit #7: Read: Current raster line (bit #8). C64 generates 262 (0-255 0) scanlines total on NTSC, 312 for Pal
+        // TODO: Do teh proper bit shift thing here!
+
+        while(1){
+            if ( PEEK(0xD012) == 0 && PEEK(0xD011) == 27 ) break;
+        };//end-while
+
+        while(cycles_to_burn != 50) { // 50 worked but doesn't scale up preciscly.
+            fifteen_nops();
+            ++cycles_to_burn;															// Do literally nothing... one more time. Makes the math easier.
+        };//end-while
+
+        raster_scan_line = PEEK(0xD012); 												// Record the current raster scan line.
+
+        if (ntsc_status) {
+            scaling_factor = 94091160 ; // This is the NTSC scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
+        } else {
+            scaling_factor = 93598750 ; // This is the PAL >:-| scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
+        };//end-if
+
+    };//end-if
+
+    POKE(0xD030,252);																// Put C128 into C64 *normal* mode.
+    CLI(); 																			// Enable interupts.
+
+    // if (raster_scan_line == 0) return;												// If for some reason this completes in less than a raster line of time, and to avoid dividing by zero, exti without printing anything.
+
+    // custom shit goes here
+    // else do the math below
+    // This is prolly chearting prolly...
+    if ( detected_cpu == CPU_65816 ) {
+
+        switch(raster_scan_line) {
+            case   5 :
+            case   6 :
+            case   7 : strcpy(mhz_string,"20.45"); break; // TODO: This doesn't really work until I do a better job of determining NTSC/PAL by counting rasterlines. // if (ntsc_status==TRUE) strcpy(mhz_string,"20.45"); else strcpy(mhz_string,"20.03"); break; // added 27 bytes
+
+            case 118 :
+            case 119 :
+            case 120 :
+            case 121 :
+            case 122 : strcpy(mhz_string,"1.02"); break;
+
+            default  : goto NON_STANDARD_RESULT;
+
+        };//end-switch
+
+    } else {
+
+        switch(raster_scan_line) {
+            case  0 :
+            case  1 : strcpy(mhz_string,"> 41");  break;
+            case  2 : strcpy(mhz_string,"40.91"); break;
+            case  3 : strcpy(mhz_string,"30.68"); break;
+            case  4 : strcpy(mhz_string,"20.45"); break;
+            case  5 : strcpy(mhz_string,"17.90"); break;
+            case  6 : strcpy(mhz_string,"15.34"); break;
+            case  7 : strcpy(mhz_string,"12.78"); break;
+            case  8 : strcpy(mhz_string,"10.23"); break;
+
+            case 44 :
+            case 45 :
+            case 46 :
+            case 47 :
+            case 48 : if (ntsc_status) strcpy(mhz_string,"2.04"); else strcpy(mhz_string,"1.97"); break;
+
+            case 91 :
+            case 92 :
+            case 93 : strcpy(mhz_string,"1.02");  break;
+
+            default  : goto NON_STANDARD_RESULT;
+
+        };//end-switch
+
+    };//end-if
+
+    goto STANDARD_RESULT;
+
+    NON_STANDARD_RESULT:;
+    estimated_original_hz  = scaling_factor / raster_scan_line; 					// This is the scaling factor. C64/C128/Ultimate=171818640 and SuperCPU=225000600.
+    estimated_mhz_only     = estimated_original_hz / 1000000; 						// Get only the MHz.
+    estimated_remaining_hz = estimated_original_hz - (estimated_mhz_only*1000000);	// Get the rest of the hz
+    estimated_remaining_hz = estimated_remaining_hz / 10000; 						// We only want the lazt 2 decimals.
+
+    if (display_mhz) sprintf(input_string, "%u.%02lu MHz", estimated_mhz_only, estimated_remaining_hz );			// Print the result if it's been told to.
+
+    goto END_SPEED;
+
+    STANDARD_RESULT:;
+    if (display_mhz) sprintf(input_string, "%s MHz", mhz_string);
+
+    END_SPEED:;
+
+};//end-func
 
 unsigned char detect_cpu(void) {
 
