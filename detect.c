@@ -51,7 +51,7 @@ unsigned char detect_sid(void) {
     // model_8580:
     // 	[...]
 
-    unsigned char i 						 = 0; // For looping
+    register unsigned char i 						 = 0; // For looping
 
     unsigned char D41B_before  				 = 0;
     unsigned char D41B_after   				 = 0;
@@ -164,7 +164,7 @@ unsigned long int estimated_remaining_hz;
 // https://cc65.github.io/doc/cc65.html#register-vars
 #pragma register-vars(on)
 
-void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, char * input_string) {
+void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, register char * input_string) {
 
     register unsigned char cycles_to_burn; // This is a zero page variable so it's super fast. https://cc65.github.io/doc/cc65.html#register-vars
 
@@ -305,7 +305,7 @@ void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigne
     estimated_remaining_hz = estimated_original_hz - (estimated_mhz_only*1000000);	// Get the rest of the hz
     estimated_remaining_hz = estimated_remaining_hz / 10000; 						// We only want the lazt 2 decimals.
 
-    if (display_mhz) sprintf(input_string, "%u.%02lu MHz", estimated_mhz_only, estimated_remaining_hz );			// Print the result if it's been told to.
+    if (display_mhz) sprintf(input_string, "%u.%0register2lu MHz", estimated_mhz_only, estimated_remaining_hz );			// Print the result if it's been told to.
 
     goto END_SPEED;
 
@@ -316,10 +316,10 @@ void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigne
 
 };//end-func
 
-unsigned char detect_cpu(void) {
+unsigned char detect_cpu(unsigned char sid_detected) {
 
     unsigned char gotten_cpu   = 0;
-    unsigned char sid_detected = 0;
+    unsigned char peek0 = PEEK(0);
 
     // cc65 has a getcpu() function that only tells you if it's a 6502 or others, but not the Commodore specific ones.
     // The cc65 online documentation is super old. The GitHub has more up-to-date information.
@@ -341,9 +341,8 @@ unsigned char detect_cpu(void) {
     // Detect a Commodore 128 --> Address 0xD030 (53296) is always 255 on a non-Commodore 128 6502 CPU.
 
     gotten_cpu   = getcpu();
-    sid_detected = detect_sid();
 
-    if ( getcpu() == 0 ) {
+    if ( gotten_cpu == 0 ) {
         if        (PEEK(0) == 47 && PEEK(0xD030) != 255) { return(9 ); // 9  MOS 8502 (Commodore 128)
         } else if (PEEK(0) == 47 && sid_detected == 2  ) { return(10); // 10 MOS 8500 (Commodore 64C)
         } else if (PEEK(0) == 47 && sid_detected == 1  ) { return(11); // 11 MOS 6510 (Commodore 64)
@@ -395,7 +394,7 @@ unsigned char detect_kernal(void) {
 
 }; // end func
 
-unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, unsigned char kernal_detected, unsigned char detected_cpu, char * input_string) {
+unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, unsigned char kernal_detected, unsigned char detected_cpu, register char * input_string) {
 
     unsigned char ntscpal_detected = 0;
     unsigned char detected_1571    = 0;

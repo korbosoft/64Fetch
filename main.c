@@ -1,4 +1,5 @@
 #include <conio.h>
+#include <em.h>
 #include <peekpoke.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,10 @@ void main() {
     char model[17];
     char prev289 = PEEK(0x289);
     char prev28A = PEEK(0x28A);
+    char prev291 = PEEK(0x291);
+    char prevborder = PEEK(0xD020);
+    char prevbg = PEEK(0xD021);
+    char prevcolor = PEEK(0x286);
     char region[9];
     char regionResult;
     char sid[9];
@@ -27,10 +32,11 @@ void main() {
     char speed[10];
     POKE(0x289,1);
     POKE(0x28A,0x7F);
+    POKE(0x291,0xFF);
     clrscr();
-    bgcolor(0);
-    printf("\x05");
-    printf("Detecting SID...");
+    POKE(0xD020,1);
+    POKE(0xD021,0);
+    printf("\5Detecting SID...");
     sidResult = detect_sid();
     switch (sidResult) {
         case 1:
@@ -132,7 +138,7 @@ void main() {
     printf(" \x1F  \x12\xBE     \x92\x05      ");
     for (i = 0; i < divLength; i++) {printf("\xC0");}
     printf("\n \x1F \x12\xBE      \x92\x05      KERNAL: %s\n", kernal);
-    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s %s\n", cpu, speed);
+    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s %s*\n", cpu, speed);
     printf(" \x1F\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);
     printf(" \x1F\x12   \x92     \x12   \x92\xBE\x05  SID: %s\n", sid);
     printf(" \x1F\x12   \x92     \x81\xA2\xA2\xA2\x05   %s\n", dev8);
@@ -142,17 +148,11 @@ void main() {
     printf(" \x1F \xBC\x12      \x92\n");
     printf(" \x1F  \xBC\x12\xBB    \x92\n");
     printf(" \x1F    \xBC\x12\xA2\xA2\x92\xBE\n");
-    printf("\n\x05 Press RETURN to exit.");
-    key = cgetc();
-    if (key == 0x0D) {
-        while(key == 0x0D) {
-            key = cgetc();
-        }
-    }
+    printf("\n\x05 *CPU MHz is only an approximation.\n");
+    printf("\n Press RETURN to exit.");
     while(key != 0x0D) {
         key = cgetc();
     }
-    POKE(0x289,prev289);
-    POKE(0x28a,prev28A);
+    __asm__ ("jsr $FCE2"); // cold reset
 }
 
