@@ -81,15 +81,3 @@ while(PEEK(0xD012) == last_raster_scan_line){}; \
 #define DRIVE_IDE64   0x64
 #define DRIVE_PI1541  0x1E
 #define DRIVE_VICEFS  0xF5
-
-unsigned char drive_detected[8];
-unsigned char drive_detected_type[8]; // 0 = no drive detected, all others related to a specific drive
-unsigned int error_number;
-unsigned char error_message[32];
-unsigned char error_message2[32];
-unsigned int error_track;
-unsigned int error_block;
-unsigned char result;
-unsigned char dev;
-signed int read_bytes;
-unsigned char disk_buffer[256];

@@ -1,6 +1,12 @@
 extern unsigned char drive_detected_type[8];
-extern unsigned int error_number;
 extern unsigned char error_message[32];
-extern unsigned int error_track;
-extern unsigned int error_block;
+extern unsigned char detect_cpu(unsigned char sid_detected);
 extern unsigned char detect_drive(unsigned char device_number, char * input_string);
+extern unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, unsigned char kernal_detected, unsigned char detected_cpu, char * input_string);
+extern unsigned char detect_region();
+extern unsigned char detect_sid();
+extern void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, char * input_string);
+extern unsigned char detect_kernal();
+extern void kernal_checksum();
+extern void get_checksum(unsigned char *c1, unsigned char *c2, unsigned char *c3);
+

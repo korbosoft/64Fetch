@@ -402,10 +402,9 @@ unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, un
     unsigned char result = 0;
     // TODO: !!!!!!!!!!!!!!! DELETE THE LINE BELOW! IT'S NOT USED AND IS STUPID!!!
     // unsigned char disk_buffer[40] = " "; // TOODO: Look up how big this string can actually get in Commodore DOS / 1541 stuff...
-    unsigned char read_bytes = 0;
 
     // First, why am I doing this twice? This whole function is a waste and needs to be tighten up a lot
-    ntscpal_detected = ntscpal <= 2 ;;
+    ntscpal_detected = ntscpal <= 2;
 
     if (detected_cpu == 9) {
         detect_drive(8, 0);
@@ -432,3 +431,10 @@ unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, un
     };//end if
 
 };//end func
+
+void get_checksum(unsigned char *c1, unsigned char *c2, unsigned char *c3) {
+    kernal_checksum();
+    *c1 = PEEK(0xFD);
+    *c2 = PEEK(0xFE);
+    *c3 = PEEK(0xFF);
+}

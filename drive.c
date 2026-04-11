@@ -11,6 +11,18 @@
 
 #include "drive.h"
 
+unsigned char drive_detected[8];
+unsigned char drive_detected_type[8]; // 0 = no drive detected, all others related to a specific drive
+unsigned int error_number;
+unsigned char error_message[32];
+unsigned char error_message2[32];
+unsigned int error_track;
+unsigned int error_block;
+unsigned char result;
+unsigned char dev;
+signed int read_bytes;
+unsigned char disk_buffer[256];
+
 unsigned char string_add_character ( unsigned char * input_string , unsigned char character_to_add ) {
 
     unsigned char string_length;

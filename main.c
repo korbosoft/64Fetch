@@ -4,7 +4,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "main.h"
+#include "detect.h"
+
+#define clrstr(str) memset(str, '\0', sizeof(str))
+
+char nybbleToHexChar(char nybble) {
+    if (nybble < 10) {
+        return nybble + '0';
+    } else {
+        return nybble - 10 + 'A';
+    }
+}
+
+void printHexByte(char byte) {
+    cputc(nybbleToHexChar((byte >> 4) & 0x0F));
+    cputc(nybbleToHexChar(byte & 0x0F));
+}
 
 void main() {
     char cpu[10];
@@ -15,16 +30,10 @@ void main() {
     char dev11[36];
     char divLength;
     char i;
-    char kernal[16];
     char kernalResult;
+    char kernalChecksum[3];
     char key;
     char model[17];
-    char prev289 = PEEK(0x289);
-    char prev28A = PEEK(0x28A);
-    char prev291 = PEEK(0x291);
-    char prevborder = PEEK(0xD020);
-    char prevbg = PEEK(0xD021);
-    char prevcolor = PEEK(0x286);
     char region[9];
     char regionResult;
     char sid[9];
@@ -36,7 +45,7 @@ void main() {
     clrscr();
     POKE(0xD020,1);
     POKE(0xD021,0);
-    printf("\5Detecting SID...");
+    printf("\5SID...");
     sidResult = detect_sid();
     switch (sidResult) {
         case 1:
@@ -48,7 +57,7 @@ void main() {
         default:
             strcpy(sid, "Unknown");
     }
-    printf(" Done.\nDetecting region...");
+    printf(" Done.\nRegion...");
     regionResult = detect_region();
     switch (regionResult) {
         case 1:
@@ -66,37 +75,10 @@ void main() {
         default:
             strcpy(region, "Unknown");
     }
-    printf(" Done.\nDetecting kernal revision...");
+    printf(" Done.\nKernal checksum...");
     kernalResult = detect_kernal();
-    switch (kernalResult) {
-        case 1:
-            strcpy(kernal, "901227-01");
-            break;
-        case 2:
-            strcpy(kernal, "901227-02");
-            break;
-        case 3:
-            strcpy(kernal, "901227-03");
-            break;
-        case 4:
-            strcpy(kernal, "251104-04");
-            break;
-        case 5:
-            strcpy(kernal, "251104-01");
-            break;
-        case 6:
-            strcpy(kernal, "901246-01");
-            break;
-        case 10:
-            strcpy(kernal, "JiffyDOS (C64)");
-            break;
-        case 11:
-            strcpy(kernal, "JiffyDOS (SX-64)");
-            break;
-        default:
-            strcpy(kernal, "Unknown");
-    }
-    printf(" Done.\nDetecting CPU...");
+    get_checksum(&kernalChecksum[0], &kernalChecksum[1], &kernalChecksum[2]);
+    printf(" Done.\nCPU...");
     cpuResult = detect_cpu(sidResult);
     switch (cpuResult) {
         case 0:
@@ -137,8 +119,12 @@ void main() {
     printf("\n \x1F   \xAC\x12\xBE  \xBC\x92\x05      %s\n", model);
     printf(" \x1F  \x12\xBE     \x92\x05      ");
     for (i = 0; i < divLength; i++) {printf("\xC0");}
-    printf("\n \x1F \x12\xBE      \x92\x05      KERNAL: %s\n", kernal);
-    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s %s*\n", cpu, speed);
+    printf("\n \x1F \x12\xBE      \x92\x05      Kernal: ");
+    printHexByte(kernalChecksum[0]);
+    printHexByte(kernalChecksum[1]);
+    printHexByte(kernalChecksum[2]);
+    cputs("\r\n");
+    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s @%s*\n", cpu, speed);
     printf(" \x1F\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);
     printf(" \x1F\x12   \x92     \x12   \x92\xBE\x05  SID: %s\n", sid);
     printf(" \x1F\x12   \x92     \x81\xA2\xA2\xA2\x05   %s\n", dev8);
