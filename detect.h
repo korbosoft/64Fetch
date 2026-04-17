@@ -7,6 +7,6 @@ extern unsigned char detect_region();
 extern unsigned char detect_sid();
 extern void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, char * input_string);
 extern unsigned char detect_kernal();
-extern void kernal_checksum();
-extern void get_checksum(unsigned char *c1, unsigned char *c2, unsigned char *c3);
+extern unsigned long __fastcall__ get_kernal_crc(void);
+extern void __fastcall__ init_crc_tables(void);
 

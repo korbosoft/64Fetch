@@ -431,10 +431,3 @@ unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, un
     };//end if
 
 };//end func
-
-void get_checksum(unsigned char *c1, unsigned char *c2, unsigned char *c3) {
-    kernal_checksum();
-    *c1 = PEEK(0xFD);
-    *c2 = PEEK(0xFE);
-    *c3 = PEEK(0xFF);
-}

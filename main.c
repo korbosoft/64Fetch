@@ -16,9 +16,15 @@ char nybbleToHexChar(char nybble) {
     }
 }
 
-void printHexByte(char byte) {
-    cputc(nybbleToHexChar((byte >> 4) & 0x0F));
-    cputc(nybbleToHexChar(byte & 0x0F));
+void print_crc32(unsigned long crc) {
+    cputc(nybbleToHexChar((crc >> 28) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 24) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 20) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 16) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 12) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 8) & 0x0F));
+    cputc(nybbleToHexChar((crc >> 4) & 0x0F));
+    cputc(nybbleToHexChar(crc & 0x0F));
 }
 
 void main() {
@@ -31,7 +37,7 @@ void main() {
     char divLength;
     char i;
     char kernalResult;
-    char kernalChecksum[3];
+    unsigned long kernalCRC;
     char key;
     char model[17];
     char region[9];
@@ -45,6 +51,7 @@ void main() {
     clrscr();
     POKE(0xD020,1);
     POKE(0xD021,0);
+    init_crc_tables();
     printf("\5SID...");
     sidResult = detect_sid();
     switch (sidResult) {
@@ -77,7 +84,7 @@ void main() {
     }
     printf(" Done.\nKernal checksum...");
     kernalResult = detect_kernal();
-    get_checksum(&kernalChecksum[0], &kernalChecksum[1], &kernalChecksum[2]);
+    kernalCRC = get_kernal_crc();
     printf(" Done.\nCPU...");
     cpuResult = detect_cpu(sidResult);
     switch (cpuResult) {
@@ -120,9 +127,7 @@ void main() {
     printf(" \x1F  \x12\xBE     \x92\x05      ");
     for (i = 0; i < divLength; i++) {printf("\xC0");}
     printf("\n \x1F \x12\xBE      \x92\x05      Kernal: ");
-    printHexByte(kernalChecksum[0]);
-    printHexByte(kernalChecksum[1]);
-    printHexByte(kernalChecksum[2]);
+    print_crc32(kernalCRC);
     cputs("\r\n");
     printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s @%s*\n", cpu, speed);
     printf(" \x1F\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);

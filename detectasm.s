@@ -1,6 +1,7 @@
 ; TODO: Convert to C
 
-.global _detect_region, _kernal_checksum
+.global _detect_region, _get_kernal_crc, _init_crc_tables
+.importzp sreg
 
 .code
 
@@ -28,50 +29,135 @@ isPAL:
 detectionDone:
     RTS
 
-zp_addr  = $FB
-zp_chk1  = $FD        ; Low byte of sum
-zp_chk2  = $FE        ; Mid byte (carry count)
-zp_chk3  = $FF        ; EOR hash / High byte
+PTR     = $1A
+CRC0    = $C400
+CRC1    = $C401
+CRC2    = $C402
+CRC3    = $C403
 
-_kernal_checksum:
-    lda #0
-    sta zp_chk1
-    sta zp_chk2
-    sta zp_chk3
-    sta zp_addr
+TAB0    = $C000
+TAB1    = $C100
+TAB2    = $C200
+TAB3    = $C300
 
-    lda #$E0
-    sta zp_addr+1
+_get_kernal_crc:
+    LDA #$FF
+    STA CRC0
+    STA CRC1
+    STA CRC2
+    STA CRC3
 
-    ldx #$20
-    tay
-    lda #0
+    LDA #$00
+    STA PTR
+    LDA #$E0
+    STA PTR+1
 
-chkloop:
-    clc
-    adc (zp_addr),y
+LOOP:
+    LDY #0
+    LDA (PTR),Y
+    JSR UPDCRC
 
-    bcc chkskip
+    INC PTR
+    BNE CHECK_END
+    INC PTR+1
 
-    inc zp_chk2
-    bne chkskip
+CHECK_END:
+    LDA PTR+1
+    BNE LOOP
 
-    pha
-    tya
-    eor zp_chk3
-    sta zp_chk3
-    pla
+    LDA CRC0
+	EOR #$FF
+	STA CRC0
+    LDA CRC1
+	EOR #$FF
+	STA CRC1
+    LDA CRC2
+	EOR #$FF
+	STA CRC2
+    LDA CRC3
+	EOR #$FF
+	STA CRC3
 
-chkskip:
-    iny
-    bne chkloop
+    ; Format: A=LL, X=LH, sreg=HL, sreg+1=HH
+    LDA CRC2
+	STA sreg
+    LDA CRC3
+	STA sreg+1
+    LDA CRC0
+    LDX CRC1
+    RTS
 
-    inc zp_addr+1
-    dex
-    bne chkloop
+UPDCRC:
+    EOR CRC0
+    TAX
+    LDA CRC1
+	EOR TAB0,X
+	STA CRC0
+    LDA CRC2
+	EOR TAB1,X
+	STA CRC1
+    LDA CRC3
+	EOR TAB2,X
+	STA CRC2
+    LDA TAB3,X
+	STA CRC3
+    RTS
 
-    sta zp_chk1
-    rts
+T0      = $C400     ; Low byte
+T1      = $C401
+T2      = $C402
+T3      = $C403     ; High byte
+
+POLY0   = $20
+POLY1   = $83
+POLY2   = $B8
+POLY3   = $ED
+
+_init_crc_tables:
+    LDX #0
+@entry_loop:
+    STX T0
+    LDA #0
+    STA T1
+	STA T2
+	STA T3
+
+    LDY #8
+@bit_loop:
+    LSR T3
+	ROR T2
+	ROR T1
+	ROR T0
+    BCC @no_xor
+
+    LDA T0
+	EOR #POLY0
+	STA T0
+    LDA T1
+	EOR #POLY1
+	STA T1
+    LDA T2
+	EOR #POLY2
+	STA T2
+    LDA T3
+	EOR #POLY3
+	STA T3
+@no_xor:
+    DEY
+    BNE @bit_loop
+
+    LDA T0
+	STA TAB0,X
+    LDA T1
+	STA TAB1,X
+    LDA T2
+	STA TAB2,X
+    LDA T3
+	STA TAB3,X
+
+    INX
+    BNE @entry_loop
+    RTS
 
 ;checksumtbl = *-5
 ;
