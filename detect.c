@@ -353,7 +353,7 @@ unsigned char detect_cpu(unsigned char sid_detected) {
 
 };//end func
 
-unsigned char detect_kernal(void) {
+unsigned char detect_kernal(unsigned long crc) {
     // I have discovered a *NEW* byte to look at in any kernal and figure out what it is. I need to re-write this to use this, becuase it'll save a bunch of code!
 
     // 	REVIEW - E4AC (58540) - Each Kernal:
@@ -369,27 +369,17 @@ unsigned char detect_kernal(void) {
     // J64 R3 58497 _68_ && 58498 79 && 58677 14
     // JSX R3 58497 _68_ && 58498 79 && 58677 6
 
-    unsigned char kernal_value = 0;
-    kernal_value = PEEK(0xE4AC);
-
-    switch (kernal_value) {
-        case 0x2B : return(1); break;					// 901227-01 - R1 C64 First Kernal
-        case 0x5C : return(2); break;					// 901227-02 - R2 C64 Early Kernal
-        case 0x81 :
-            switch ( PEEK(58497L) ) {
-                case 68 :
-                    switch (PEEK(58677L)) {
-                        case 14 : return(10); break;	// R3 C64 JiffyDOS
-                        case  6 : return(11); break;	// R3 SX-64 JiffyDOS
-                    };//end-switch
-                    break;
-            };//end-switch
-            return(3); 									// 901227-03 - R3 C64 Kernal
-            break;
-                        case 0xB3 : return(4); break;					// 251104-04 - R4 SX-64 Common Latest Kernal
-                        case 0x00 :	return(5); break;					// 251104-01 - R1 SX-64 Rare First Kernal
-                        case 0x63 : return(6); break;					// 901246-01 - 4064 Educator 64 --> ? Fair to say this is most similar to a stock R3 901227-03 kernal. From here: "Note that some patches of 901227-03 are included." http://www.zimmers.net/anonftp/pub/cbm/firmware/computers/c64/revisions.txt
-                        default   : return(0); break;  					// Default Unknown Kernal
+    switch (crc) {
+        case 0xDCE782FA : return(1); break;					// 901227-01 - R1 C64 First Kernal
+        case 0xA5C687B3 : return(2); break;					// 901227-02 - R2 C64 Early Kernal
+        case 0xDBE3E7C7 : return(3); break; 									// 901227-03 - R3 C64 Kernal
+        case 0x2F79984C : return(10); break;	// R3 C64 JiffyDOS
+        case 0x2C5965D4 : return(4); break;					// 251104-04 - R4 SX-64 Common Latest Kernal
+        // case 0x00000000 :	return(5); break;					// 251104-01 - R1 SX-64 Rare First Kernal
+        case 0x2B5A88F5 : return(11); break;	// R3 SX-64 JiffyDOS
+        case 0x789C8CC5 : return(6); break;					// 901246-01 - 4064 Educator 64
+        case 0xB0A9C2DA : return(8); break;					// 390852-01 - C64 Games System
+        default   : return(0); break;  					// Default Unknown Kernal
     };//end switch
 
 }; // end func

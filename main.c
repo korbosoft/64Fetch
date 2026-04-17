@@ -36,6 +36,7 @@ void main() {
     char dev11[36];
     char divLength;
     char i;
+    char kernal[16];
     char kernalResult;
     unsigned long kernalCRC;
     char key;
@@ -83,8 +84,37 @@ void main() {
             strcpy(region, "Unknown");
     }
     printf(" Done.\nKernal checksum...");
-    kernalResult = detect_kernal();
     kernalCRC = get_kernal_crc();
+    kernalResult = detect_kernal(kernalCRC);
+    switch (kernalResult) {
+        case 1:
+            strcpy(kernal, "901227-01");
+            break;
+        case 2:
+            strcpy(kernal, "901227-02");
+            break;
+        case 3:
+            strcpy(kernal, "901227-03");
+            break;
+        case 4:
+            strcpy(kernal, "251104-04");
+            break;
+        case 5:
+            strcpy(kernal, "251104-01");
+            break;
+        case 6:
+            strcpy(kernal, "901246-01");
+            break;
+        case 10:
+            strcpy(kernal, "JiffyDOS (C64)");
+            break;
+        case 11:
+            strcpy(kernal, "JiffyDOS (SX-64)");
+            break;
+        default:
+            strcpy(kernal, "Unknown");
+    }
+
     printf(" Done.\nCPU...");
     cpuResult = detect_cpu(sidResult);
     switch (cpuResult) {
@@ -126,8 +156,7 @@ void main() {
     printf("\n \x1F   \xAC\x12\xBE  \xBC\x92\x05      %s\n", model);
     printf(" \x1F  \x12\xBE     \x92\x05      ");
     for (i = 0; i < divLength; i++) {printf("\xC0");}
-    printf("\n \x1F \x12\xBE      \x92\x05      Kernal: ");
-    print_crc32(kernalCRC);
+    printf("\n \x1F \x12\xBE      \x92\x05      Kernal: %s", kernal);
     cputs("\r\n");
     printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s @%s*\n", cpu, speed);
     printf(" \x1F\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);
@@ -136,11 +165,14 @@ void main() {
     printf(" \x1F\x12   \x92\xBB    \x81\x12   \xBC\x92\x05  %s\n", dev9);
     printf(" \x1F\x12\xE1  \xBC\x92    \x81\x12    \xBC\x92\x05 %s\n", dev10);
     printf(" \x1F \x12    \x92\xA2\xA2\x12\xBE\x92\x05      %s\n", dev11);
-    printf(" \x1F \xBC\x12      \x92\n");
+    printf(" \x1F \xBC\x12      \x92\x05      Kernal CRC32: ");
+    print_crc32(kernalCRC);
+    cputs("\r\n");
     printf(" \x1F  \xBC\x12\xBB    \x92\n");
     printf(" \x1F    \xBC\x12\xA2\xA2\x92\xBE\n");
     printf("\n\x05 *CPU MHz is only an approximation.\n");
     printf("\n Press RETURN to exit.");
+    cgetc();
     while(key != 0x0D) {
         key = cgetc();
     }
