@@ -30,10 +30,7 @@ void print_crc32(unsigned long crc) {
 void main() {
     char cpu[10];
     char cpuResult;
-    char dev8[36];
-    char dev9[36];
-    char dev10[36];
-    char dev11[36];
+    char dev8[36], dev9[36], dev10[36], dev11[36];
     char divLength;
     char i;
     char kernal[16];
@@ -45,7 +42,6 @@ void main() {
     char regionResult;
     char sid[9];
     char sidResult;
-    char speed[10];
     POKE(0x289,1);
     POKE(0x28A,0x7F);
     POKE(0x291,0xFF);
@@ -53,7 +49,7 @@ void main() {
     POKE(0xD020,1);
     POKE(0xD021,0);
     init_crc_tables();
-    printf("\5SID...");
+    cputs("\5SID...");
     sidResult = detect_sid();
     switch (sidResult) {
         case 1:
@@ -65,7 +61,7 @@ void main() {
         default:
             strcpy(sid, "Unknown");
     }
-    printf(" Done.\nRegion...");
+    cputs(" Done.\r\nRegion...");
     regionResult = detect_region();
     switch (regionResult) {
         case 1:
@@ -83,7 +79,7 @@ void main() {
         default:
             strcpy(region, "Unknown");
     }
-    printf(" Done.\nKernal checksum...");
+    cputs(" Done.\r\nKernal checksum...");
     kernalCRC = get_kernal_crc();
     kernalResult = detect_kernal(kernalCRC);
     switch (kernalResult) {
@@ -115,7 +111,7 @@ void main() {
             strcpy(kernal, "Unknown");
     }
 
-    printf(" Done.\nCPU...");
+    cputs(" Done.\r\nCPU...");
     cpuResult = detect_cpu(sidResult);
     switch (cpuResult) {
         case 0:
@@ -136,29 +132,28 @@ void main() {
         default:
             strcpy(cpu, "Unknown");
     }
-    detect_speed(1, cpuResult, regionResult, speed);
-    printf(" Done.\nDetecting Drives");
+    cputs(" Done.\r\nDrives.");
     clrstr(dev8);
     detect_drive(8, dev8);
-    printf(".");
+    cputs("8.");
     clrstr(dev9);
     detect_drive(9, dev9);
-    printf(".");
+    cputs("9.");
     clrstr(dev10);
     detect_drive(10, dev10);
-    printf(".");
+    cputs("10.");
     clrstr(dev11);
     detect_drive(11, dev11);
-    printf(" Done.\nDetecting Model...");
+    cputs("11 Done.\r\nDetecting Model...");
     divLength = detect_model(regionResult, sidResult, kernalResult, cpuResult, model);
-    printf(" Done.");
+    cputs(" Done.");
     clrscr();
     printf("\n \x1F   \xAC\x12\xBE  \xBC\x92\x05      %s\n", model);
     printf(" \x1F  \x12\xBE     \x92\x05      ");
-    for (i = 0; i < divLength; i++) {printf("\xC0");}
+    for (i = 0; i < divLength; i++) {cputc('\xC0');}
     printf("\n \x1F \x12\xBE      \x92\x05      Kernal: %s", kernal);
     cputs("\r\n");
-    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s @%s*\n", cpu, speed);
+    printf(" \x1F\xAC\x12   \xA2\x92  \xBC\xA2\xA2\xA2\xA2\xA2\x05 CPU: %s\n", cpu);
     printf(" \x1F\x12\xBE  \x92\xA1    \x12    \x92\xBE\x05 VIC: %s\n", region);
     printf(" \x1F\x12   \x92     \x12   \x92\xBE\x05  SID: %s\n", sid);
     printf(" \x1F\x12   \x92     \x81\xA2\xA2\xA2\x05   %s\n", dev8);
@@ -170,10 +165,9 @@ void main() {
     cputs("\r\n");
     printf(" \x1F  \xBC\x12\xBB    \x92\n");
     printf(" \x1F    \xBC\x12\xA2\xA2\x92\xBE\n");
-    printf("\n\x05 *CPU MHz is only an approximation.\n");
-    printf("\n Press RETURN to exit.");
+    puts("\r\n \x05Press RETURN to exit.");
     cgetc();
-    while(key != 0x0D) {
+    while (key != 0x0D) {
         key = cgetc();
     }
     __asm__ ("jsr $FCE2"); // cold reset

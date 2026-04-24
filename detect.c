@@ -144,177 +144,7 @@ unsigned char detect_sid(void) {
         return(0);
     };
 
-};//end func
-
-void fifteen_nops(void) {
-    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
-    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
-    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
-    /* 10 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
-    /*  5 */	__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");__asm__ ("NOP");
-};//end-func
-
-
-unsigned char 	  raster_scan_line;
-unsigned long int estimated_original_hz;
-unsigned char     estimated_mhz_only;
-unsigned long int estimated_remaining_hz;
-
-// // Using this for the fastest loops below for CPU MHz detection.
-// // https://cc65.github.io/doc/cc65.html#register-vars
-// #pragma register-vars(on)
-
-void detect_speed(unsigned char display_mhz, unsigned char detected_cpu, unsigned char ntscpal, char * input_string) {
-
-    register unsigned char cycles_to_burn; // This is a zero page variable so it's super fast. https://cc65.github.io/doc/cc65.html#register-vars
-
-    unsigned char i;
-    unsigned char ntsc_status = ntscpal < 2;
-    unsigned long int scaling_factor;
-    unsigned char mhz_string[6];
-
-    // 1.02 MHz NTSC / 0.985 MHz PAL
-    // The clock speed doubles when 80-column display modes are in use (2.02 MHz for NTSC, 1.97 MHz for PAL)
-    // C64  CLOCK=1022730 for NTSC systems and CLOCK= 985250 for PAL systems.
-    // C128 CLOCK=2045460 for NTSC systems and CLOCK=1970500 for PAL systems.
-
-    // TODO: FUCKING PAL! I FUCKING HATE PAL!!!
-    // TODO: I need to make a function full of 10 NOP's
-    // TODO: And then call that to save some space.
-    // TODO: And then I need to make PAL versions
-    // TODO: For the C64/C128 and the SuperCPU.
-    // TODO: FUCK YOU PAL!
-
-    estimated_mhz_only = 0;
-    estimated_remaining_hz = 0;
-    estimated_original_hz = 0;
-    raster_scan_line = 0;
-    i = 0;
-    scaling_factor = 0;
-    cycles_to_burn = 0;
-
-    SEI(); 				// Disable interupts.
-
-    if ( detected_cpu == CPU_65816 ) {
-
-        // Display mode $D011 Bit #7: Read: Current raster line (bit #8). C64 generates 262 (0-255 0) scanlines total on NTSC, 312 for Pal
-        // TODO: Do teh proper bit shift thing here!
-        while(1){
-            if ( PEEK(0xD012) == 0 && PEEK(0xD011) == 27 ) break;
-        };//end-while
-
-        for (i = 0; i < 7; ++i) ;		// *THIS IS HERE INTENTIONALLY!* This is because this slows down the SuperCPU and somehow this makes the timing math work out perfectly!
-
-        for (i = 1; i <= 60; ++i) {
-            fifteen_nops();
-        };//end-for
-
-        raster_scan_line = PEEK(0xD012); 												// Record the current raster scan line.
-
-        if (ntsc_status) {
-            scaling_factor = 122727600 ; // This is the NTSC scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
-        } else {
-            scaling_factor = 120200500 ; // This is the PAL >:-| scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
-        };//end-if
-
-    } else { // 6510 CPU
-
-        POKE(0xD030,253);	// Put C128 into fast mode. This comes *BEFORE* we start the timing so it doesn't affect the timing. However, the math works out better above with the SuperCPU.
-
-        // Display mode $D011 Bit #7: Read: Current raster line (bit #8). C64 generates 262 (0-255 0) scanlines total on NTSC, 312 for Pal
-        // TODO: Do teh proper bit shift thing here!
-
-        while(1){
-            if ( PEEK(0xD012) == 0 && PEEK(0xD011) == 27 ) break;
-        };//end-while
-
-        while(cycles_to_burn != 50) { // 50 worked but doesn't scale up preciscly.
-            fifteen_nops();
-            ++cycles_to_burn;															// Do literally nothing... one more time. Makes the math easier.
-        };//end-while
-
-        raster_scan_line = PEEK(0xD012); 												// Record the current raster scan line.
-
-        if (ntsc_status) {
-            scaling_factor = 94091160 ; // This is the NTSC scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
-        } else {
-            scaling_factor = 93598750 ; // This is the PAL >:-| scaling factor for 6502 based systems like the C64, C128 and Ultimate 64.
-        };//end-if
-
-    };//end-if
-
-    POKE(0xD030,252);																// Put C128 into C64 *normal* mode.
-    CLI(); 																			// Enable interupts.
-
-    // if (raster_scan_line == 0) return;												// If for some reason this completes in less than a raster line of time, and to avoid dividing by zero, exti without printing anything.
-
-    // custom shit goes here
-    // else do the math below
-    // This is prolly chearting prolly...
-    if ( detected_cpu == CPU_65816 ) {
-
-        switch(raster_scan_line) {
-            case   5 :
-            case   6 :
-            case   7 : strcpy(mhz_string,"20.45"); break; // TODO: This doesn't really work until I do a better job of determining NTSC/PAL by counting rasterlines. // if (ntsc_status==TRUE) strcpy(mhz_string,"20.45"); else strcpy(mhz_string,"20.03"); break; // added 27 bytes
-
-            case 118 :
-            case 119 :
-            case 120 :
-            case 121 :
-            case 122 : strcpy(mhz_string,"1.02"); break;
-
-            default  : goto NON_STANDARD_RESULT;
-
-        };//end-switch
-
-    } else {
-
-        switch(raster_scan_line) {
-            case  0 :
-            case  1 : strcpy(mhz_string,"> 41");  break;
-            case  2 : strcpy(mhz_string,"40.91"); break;
-            case  3 : strcpy(mhz_string,"30.68"); break;
-            case  4 : strcpy(mhz_string,"20.45"); break;
-            case  5 : strcpy(mhz_string,"17.90"); break;
-            case  6 : strcpy(mhz_string,"15.34"); break;
-            case  7 : strcpy(mhz_string,"12.78"); break;
-            case  8 : strcpy(mhz_string,"10.23"); break;
-
-            case 44 :
-            case 45 :
-            case 46 :
-            case 47 :
-            case 48 : if (ntsc_status) strcpy(mhz_string,"2.04"); else strcpy(mhz_string,"1.97"); break;
-
-            case 91 :
-            case 92 :
-            case 93 : strcpy(mhz_string,"1.02");  break;
-
-            default  : goto NON_STANDARD_RESULT;
-
-        };//end-switch
-
-    };//end-if
-
-    goto STANDARD_RESULT;
-
-    NON_STANDARD_RESULT:;
-    estimated_original_hz  = scaling_factor / raster_scan_line; 					// This is the scaling factor. C64/C128/Ultimate=171818640 and SuperCPU=225000600.
-    estimated_mhz_only     = estimated_original_hz / 1000000; 						// Get only the MHz.
-    estimated_remaining_hz = estimated_original_hz - (estimated_mhz_only*1000000);	// Get the rest of the hz
-    estimated_remaining_hz = estimated_remaining_hz / 10000; 						// We only want the lazt 2 decimals.
-
-    if (display_mhz) sprintf(input_string, "%u.%02lu MHz", estimated_mhz_only, estimated_remaining_hz );			// Print the result if it's been told to.
-
-    goto END_SPEED;
-
-    STANDARD_RESULT:;
-    if (display_mhz) sprintf(input_string, "%s MHz", mhz_string);
-
-    END_SPEED:;
-
-};//end-func
+};
 
 unsigned char detect_cpu(unsigned char sid_detected) {
 
@@ -351,24 +181,9 @@ unsigned char detect_cpu(unsigned char sid_detected) {
     } else 												 { return(gotten_cpu); // 255 Unknown
     };
 
-};//end func
+};
 
 unsigned char detect_kernal(unsigned long crc) {
-    // I have discovered a *NEW* byte to look at in any kernal and figure out what it is. I need to re-write this to use this, becuase it'll save a bunch of code!
-
-    // 	REVIEW - E4AC (58540) - Each Kernal:
-    // - 901227-01 --> 0x2B
-    // - 901227-02 --> 0x5C
-    // - 901227-03 --> 0x81
-    // - 251104-01 --> 0x00
-    // - 251104-04 --> 0xB3
-    // - 901246-01 --> 0x63
-
-    // C64 R3 58497 _77_ && 58498 79 && 58677 14
-    // SX  R3 58497 _83_ && 58498 88 && 58677 6
-    // J64 R3 58497 _68_ && 58498 79 && 58677 14
-    // JSX R3 58497 _68_ && 58498 79 && 58677 6
-
     switch (crc) {
         case 0xDCE782FA : return(1); break;					// 901227-01 - R1 C64 First Kernal
         case 0xA5C687B3 : return(2); break;					// 901227-02 - R2 C64 Early Kernal
@@ -380,44 +195,67 @@ unsigned char detect_kernal(unsigned long crc) {
         case 0x789C8CC5 : return(6); break;					// 901246-01 - 4064 Educator 64
         case 0xB0A9C2DA : return(8); break;					// 390852-01 - C64 Games System
         default   : return(0); break;  					// Default Unknown Kernal
-    };//end switch
+    };
 
-}; // end func
+};
 
 unsigned char detect_model(unsigned char ntscpal, unsigned char sid_detected, unsigned char kernal_detected, unsigned char detected_cpu, char * input_string) {
+    const char* result_c64 = "Commodore 64";
+    const char* result_c64c = "Commodore 64C";
+    const char* result_sx64 = "SX-64";
+    const char* result_edu64 = "Educator 64";
+    const char* result_c128 = "Commodore 128";
+    const char* result_c128d = "Commodore 128D";
+    const char* result_c128dcr = "Commodore 128DCR";
+    const char* result_u64 = "Ultimate 64/C64U";
+    const char* result_unknown = "Unknown";
 
     unsigned char ntscpal_detected = 0;
     unsigned char detected_1571    = 0;
 
     unsigned char result = 0;
-    // TODO: !!!!!!!!!!!!!!! DELETE THE LINE BELOW! IT'S NOT USED AND IS STUPID!!!
-    // unsigned char disk_buffer[40] = " "; // TOODO: Look up how big this string can actually get in Commodore DOS / 1541 stuff...
 
-    // First, why am I doing this twice? This whole function is a waste and needs to be tighten up a lot
     ntscpal_detected = ntscpal <= 2;
 
     if (detected_cpu == 9) {
-        detect_drive(8, 0);
-        detected_1571=(drive_detected_type[0]==0x71); // If we've got a 1571 on device 8 then maybe we've got a C128D
-    };//end-if
+
+    };
 
     // SID Return Values:		// CPU Return Values:
     // 1 - 6581 				// 9  - MOS 8502 Commodore 128
     // 2 - 8580 				// 10 - MOS 8500 Commodore 64C
     // 0 - Undetermined 		// 11 - MOS 6510 Commodore 64
+    if (PEEK(0xDF00) == 0xFF && PEEK(0xDF1F) == 0xFF) {
+        strcpy(input_string, result_u64);
+    } else if (kernal_detected == 4 || kernal_detected == 5 || kernal_detected == 11) {
+        // SX-64 251104-01 or 251104-04 Kernal ROM
+        strcpy(input_string, result_sx64); return(5);
+    } else if (kernal_detected == 6) {
+        // Educator 64
+        strcpy(input_string, result_edu64); return(11);
+    } else if (detected_cpu == 9) {
+        // detect_drive(8, 0);
+        detected_1571=(drive_detected_type[0]==0x71); // If we've got a 1571 on device 8 then maybe we've got a C128D
+        if (sid_detected == 1) {
+            if (detected_1571 == 1) {
+                // 128D CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:6581 Drive: Must have 1571
+                strcpy(input_string, result_c128d); return(14);
+            }
+            // 128 CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:6581 Drive: Anything other than 1571
+            strcpy(input_string, result_c128); return(13);
+        }
+        // 128DCR CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:8580
+        // Don't need to worry about the drive, because the DCR is the only machine with the 8502 CPU and 8580 SID.
+        strcpy(input_string, result_c128dcr); return(16);
+    } else if (sid_detected == 1) {
+        // 64 (Early) NTSC + 6581 + KERNAL R1 901227-01 --> C64 (Early) --> VIC-II 6567
+        strcpy(input_string, result_c64); return(12);
+    } else if (sid_detected == 2) {
+        // 64C NTSC + 8580 + Any --> C64C --> VIC-II 8562
+        strcpy(input_string, result_c64c); return(13);
+    } else {
+        // Couldn't detect a specific model!
+        strcpy(input_string, result_unknown); return(7);
+    };
 
-    if        (kernal_detected  == 4 || kernal_detected == 5 || kernal_detected == 11) { strcpy(input_string, "SX-64"); return(5);   // SX-64 251104-01 or 251104-04 Kernal ROM
-    } else if (kernal_detected  == 6 )                                                 { strcpy(input_string, "Educator 64"); return(11);   // Educator 64
-        // TODO: THIS CANNOT BE 0 SINCE THERE"S NO ELS CONDITION!!!!! Need to rework! it's a SID problem!
-    } else if (detected_cpu     == 9 &&    sid_detected == 1 &&   detected_1571 == 1)  { strcpy(input_string, "Commodore 128D"); return(14);   // 128D       CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:6581 Drive: Must have 1571
-    } else if (detected_cpu     == 9 &&    sid_detected == 1 )                         { strcpy(input_string, "Commodore 128"); return(13);   // 128        CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:6581 Drive: Anything other than 1571
-    } else if (detected_cpu     == 9 &&    sid_detected == 2 )     					   { strcpy(input_string, "Commodore 128DCR"); return(16);   // 128DCR     CPU:8502 GPU:8564 NTSC or 8566/69 PAL SID:8580 Don't need to worry about the drive, because the DCR is the only machine with the 8502 CPU and 8580 SID.
-    } else if (ntscpal_detected == 0 &&    sid_detected == 1 && kernal_detected == 1)  { strcpy(input_string, "Commodore 64"); return(12);   // 64 (Early) NTSC + 6581 + KERNAL R1 901227-01 --> C64 (Early) --> VIC-II 6567
-    } else if (ntscpal_detected == 0 &&    sid_detected == 1 )                         { strcpy(input_string, "Commodore 64"); return(12);   // 64         NTSC + 6581 + KERNAL R2 901227-02 --> C64 	      --> VIC-II 6567
-    } else if (ntscpal_detected == 0 &&    sid_detected == 2 )                         { strcpy(input_string, "Commodore 64C"); return(13);   // 64C        NTSC + 8580 + Any		 	      --> C64C 	      --> VIC-II 8562
-    } else if (ntscpal_detected == 1 &&    sid_detected == 1 )                         { strcpy(input_string, "Commodore 64"); return(12);   // 64         PAL  + 6581 + Any 			      --> C64 		  --> VIC-II 6569/6572/6573
-    } else if (ntscpal_detected == 1 &&    sid_detected == 2 )                         { strcpy(input_string, "Commodore 64C"); return(13);   // 64C        PAL  + 8580 + Any		  		  --> C64C 	      --> VIC-II 8565
-    } else 																			   { strcpy(input_string, "Unknown"); return(7); // Couldn't detect a specific model!
-    };//end if
-
-};//end func
+};
