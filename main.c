@@ -49,7 +49,7 @@ void main() {
     POKE(0xD020,1);
     POKE(0xD021,0);
     init_crc_tables();
-    cputs("\5SID...");
+    printf("\5SID...");
     sidResult = detect_sid();
     switch (sidResult) {
         case 1:
@@ -133,16 +133,12 @@ void main() {
             strcpy(cpu, "Unknown");
     }
     cputs(" Done.\r\nDrives.");
-    clrstr(dev8);
     detect_drive(8, dev8);
     cputs("8.");
-    clrstr(dev9);
     detect_drive(9, dev9);
     cputs("9.");
-    clrstr(dev10);
     detect_drive(10, dev10);
     cputs("10.");
-    clrstr(dev11);
     detect_drive(11, dev11);
     cputs("11 Done.\r\nDetecting Model...");
     divLength = detect_model(regionResult, sidResult, kernalResult, cpuResult, model);
@@ -165,8 +161,9 @@ void main() {
     cputs("\r\n");
     printf(" \x1F  \xBC\x12\xBB    \x92\n");
     printf(" \x1F    \xBC\x12\xA2\xA2\x92\xBE\n");
-    puts("\r\n \x05Press RETURN to exit.");
+    printf("\r\n \x05Press RETURN to exit.");
     cgetc();
+    key = 0x00;
     while (key != 0x0D) {
         key = cgetc();
     }

@@ -11,6 +11,8 @@
 
 #include "drive.h"
 
+#define clrstr(str) memset(str, '\0', sizeof(str))
+
 unsigned char drive_detected[8];
 unsigned char drive_detected_type[8]; // 0 = no drive detected, all others related to a specific drive
 unsigned int error_number;
@@ -109,10 +111,11 @@ void process_status(char * input_string) {
 };//end func
 
 unsigned char detect_drive(unsigned char device_number, char * input_string) {
-
     unsigned char cbm_result = 255; // we need to do this
 
     unsigned char error_message2[16] ;
+
+	clrstr(input_string);
 
     set_drive_detection(device_number,0);
     set_drive_type(device_number,0);
@@ -207,12 +210,6 @@ unsigned char detect_drive(unsigned char device_number, char * input_string) {
 		set_drive_type(device_number, DRIVE_1541);
 
 	// ****************************************
-	// COMMODORE 1541 - JiffyDOS - IEC
-	// ****************************************
-	// } else if ( matching( "jiffydos 5.0 1541", error_message) ) {
-	 	// set_drive_type(device_number, DRIVE_1541);
-
-	// ****************************************
 	// SD2IEC OLD FIRMWARE - IEC
 	// ****************************************
 	// We want to detec the beginning "uiec" so we know it's an SD2IEC, and maybe display "SD2IEC v0.11.3"
@@ -303,13 +300,6 @@ unsigned char detect_drive(unsigned char device_number, char * input_string) {
 			 	 error_message[15]=='7' && \
 			 	 error_message[16]=='1' ) ){
 		set_drive_type(device_number, DRIVE_1571);
-
-	// ****************************************
-	// COMMODORE 1571 - JiffyDOS - IEC
-	// ****************************************
-	// } else if ( matching( "jiffydos 6.0 1571", error_message) ) {
-	// 	set_drive_type(device_number, DRIVE_1571);
-
 
 	// ****************************************
 	// COMMODORE 1581 - IEC
@@ -413,19 +403,6 @@ unsigned char detect_drive(unsigned char device_number, char * input_string) {
 	} else if ( matching( "cbm dos v2", error_message) ) { 		// TODO: Add 4040 to the end of the string like the 2031.
 		set_drive_type(device_number, DRIVE_4040);
 
-
-	// ****************************************
-	// Pi1541
-	// ****************************************
-	// } else if ( matching( "pi1541 v00.00", error_message) ) { // This isn't what I should use. It's just a reminder. I'll search just for the beginning part.
-	//	set_drive_type(device_number, DRIVE_PI1541);
-
-	// https://github.com/pi1541/Pi1541/blob/master/src/iec_commands.cpp
-	// Starting Line: 165
-	// case ERROR_73_DOSVERSION:
-	// 	snprintf(ErrorMessage, sizeof(ErrorMessage)-1, "%02d,PI1541 V%02d.%02d,%02d,%02d\r", errorCode,
-	// 				versionMajor, versionMinor, track, sector);
-
 	// ****************************************
 	// UNKNOWN DRIVE
 	// ****************************************
@@ -434,33 +411,11 @@ unsigned char detect_drive(unsigned char device_number, char * input_string) {
 		strcpy(error_message, "Unknown Device\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
 	};//end if
 
-
-	// TODO: It looks like it's super easy to read about 4 characters at the end of string to identify them.
-	// TODO: I can also do this because the smart JiffyDOS makers made the strings in the same length and format.
-	// TODO: This means it's easy to read both:
-	// TODO: "cbm dos v2.6 1541" and
-	// TODO: "jiffydos 5.0 1541" because they line up. It saves an entire check!
-	// TODO: This would also save *a lot* of space in the program,
-	// TODO: because I don't have to store and check against the entire string!!!
-	// TODO: This is way better than trying to use Pearson Hashing!!!!!
-	// TODO: I was originally going to use this --> https://en.wikipedia.org/wiki/Pearson_hashing
-	// TODO: That way I could check against the entire string without storing all the strings to check.
-	// TODO: However, I would have needed to also have a block 0 through 255 in a scambled array,
-	// TODO: which was going to take up more room than it was worth.
-	// TODO: Although I was going to use my basic tokens array as this anyway,
-	// TODO: even though it wasn't totally correct.
-	// TODO: This is worth exploring anyway, perhaps in a stand alone program just to see how it works.
-	// TODO: If this does work, I could use it to store a list of commands and built-in aliases, saving a bunch!
-	// TODO: This is worth exploring!
-
 	strupper(error_message);
 
     // TODO: This should go into a section below, so we only cut it off at length 22 when it's being displayed as part of the sysinfo or title screen.
     error_message[23]='\0'; // GitHub Issue#???: Text too makes it look bad: SD2IEC V1.0.0ATENTDEAD0-24 - Testing: // strcpy(error_message,"SD2IEC V1.0.0ATENTDEAD0-24");
 
-    // NEW! Mon Dec 13 505PM
-    // This is to try and address the weird display of null strings with that stupid /6_O string.
-    // TODO: This is a kludgy fix. The /6_O string.it whatever I see when there's some weird unuised or unformatted or wahtever string fuck I hate this. It matches some text starting rigth at 0x0000 so WTF??? it's like a null pointer or somethign but it's not. Fuck fuck fuck.
     if ( result == 2 && error_number == 73 && strlen(error_message) != 4 ) {
         sprintf(input_string, "%02i: %s", device_number, error_message ); //  everything is okay, and we go the drive identity
     } else if ( cbm_result == 0 && strlen(error_message) == 4 ) {
