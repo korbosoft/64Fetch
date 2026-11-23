@@ -1,37 +1,46 @@
 /*
  * drive.h
- * See 'drive.c'.
+ * See 'device.c'.
  */
-#define set_drive_detection(drive,detected) drive_detected[drive-8] = detected
-#define get_drive_detection(drive)          drive_detected[drive-8]
-#define set_drive_type(drive,type)          drive_detected_type[drive-8] = type
-#define get_drive_type(drive)               drive_detected_type[drive-8]
+#ifndef DRIVE_H
+#define DRIVE_H
+
+#define PEEK(addr) (*(volatile unsigned char *)(addr))
+#define POKE(addr, val) (*(volatile unsigned char *)(addr) = (unsigned char)(val))
+
+#define set_drive_detection(drive, detected) drive_detected[(drive) - 8] = (detected)
+#define get_drive_detection(drive)          drive_detected[(drive) - 8]
+#define set_drive_type(drive, type)          drive_detected_type[(drive) - 8] = (type)
+#define get_drive_type(drive)               drive_detected_type[(drive) - 8]
+
 #define delay_one_decisecond()          \
-POKE(0xDC08,0); /* Start TOD Clock. */  \
-while(PEEK(0xDC08) == 0){};             \
-//end-func
+do {                                    \
+    POKE(0xDC08, 0); /* Start TOD Clock. */ \
+    while (PEEK(0xDC08) == 0) {}        \
+} while (0)
 
 #define delay_one_second()              \
-POKE(0xDC08,0); /* Start TOD Clock. */  \
-POKE(0xDC09,0); /* Start TOD Clock. */  \
-while(PEEK(0xDC09) == 0){};             \
-//end-func
+do {                                    \
+    POKE(0xDC08, 0); /* Start TOD Clock. */ \
+    POKE(0xDC09, 0); /* Start TOD Clock. */ \
+    while (PEEK(0xDC09) == 0) {}        \
+} while (0)
 
-#define delay_one_rasterscanline(void)          \
-last_raster_scan_line = PEEK(0xD012);           \
-while(PEEK(0xD012) == last_raster_scan_line){}; \
-//end-func
+#define delay_one_rasterscanline()                      \
+do {                                                    \
+    unsigned char _last_line = PEEK(0xD012);            \
+    while (PEEK(0xD012) == _last_line) {}               \
+} while (0)
 
-#define supercpu_enable()  POKE(0xD07B,255)  // Enable  SuperCPU. Switch to 20 MHz mode. STA $D07B
-#define supercpu_disable() POKE(0xD07A,255)                                 // Disable SuperCPU. Switch to  1 MHz mode. STA $D07A
+#define supercpu_enable()  POKE(0xD07B, 255)  // Enable SuperCPU (20 MHz mode)
+#define supercpu_disable() POKE(0xD07A, 255)  // Disable SuperCPU (1 MHz mode)
 
-#define matching(testing_string,original_string) (strcmp(original_string,testing_string)==0)
+#define matching(testing_string, original_string) (strcmp((original_string), (testing_string)) == 0)
 
 // ********************************************************************************
 // DRIVE TYPE DEFINITIONS
 // ********************************************************************************
 
-// DRIVE TYPE MACROS
 // Commodore IEEE Floppy
 #define DRIVE_2031    0x31
 #define DRIVE_2040    0x20
@@ -68,16 +77,18 @@ while(PEEK(0xD012) == last_raster_scan_line){}; \
 #define DRIVE_HD_500  0xC5
 #define DRIVE_HD_1000 0xC1
 #define DRIVE_HD_2000 0xC2
-#define DRIVE_CMDHD   0xCD          // I believe all these
-#define DRIVE_FD2000  DRIVE_CMDHD   // work in exactly
-#define DRIVE_FD4000  DRIVE_CMDHD   // the same way.
+#define DRIVE_CMDHD   0xCD
+#define DRIVE_FD2000  DRIVE_CMDHD
+#define DRIVE_FD4000  DRIVE_CMDHD
 
 // MSD Floppy Drives
 #define DRIVE_SD1     0xD1
 #define DRIVE_SD2     0xD2
 
 // Modern SD Card Drives
-#define DRIVE_UIEC    0xEC          // TODO: Make one for SD2IEC or find/replace all references.
+#define DRIVE_UIEC    0xEC
 #define DRIVE_IDE64   0x64
 #define DRIVE_PI1541  0x1E
 #define DRIVE_VICEFS  0xF5
+
+#endif

@@ -1,4 +1,8 @@
 *.o
 *.kate-swp
 *.prg
-main
+*.asm
+*.int
+*.lbl
+*.map
+main.prg
